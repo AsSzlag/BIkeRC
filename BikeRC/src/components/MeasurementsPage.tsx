@@ -251,13 +251,13 @@ const MeasurementsPage: React.FC = () => {
 
       {/* Data Table */}
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-        <Table>
+        <Table sx={{ tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-              <TableCell padding="checkbox">
+              <TableCell padding="checkbox" sx={{ width: '50px' }}>
                 <Checkbox />
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ width: '150px' }}>
                 <Box 
                   sx={{ 
                     display: 'flex', 
@@ -285,7 +285,7 @@ const MeasurementsPage: React.FC = () => {
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ width: '200px' }}>
                 <Box 
                   sx={{ 
                     display: 'flex', 
@@ -313,7 +313,7 @@ const MeasurementsPage: React.FC = () => {
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell>
+              <TableCell sx={{ width: '300px' }}>
                 <Box 
                   sx={{ 
                     display: 'flex', 
@@ -341,7 +341,7 @@ const MeasurementsPage: React.FC = () => {
                   </Box>
                 </Box>
               </TableCell>
-              <TableCell align="right"></TableCell>
+              <TableCell align="right" sx={{ width: '50px' }}></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>

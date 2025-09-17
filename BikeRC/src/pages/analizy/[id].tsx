@@ -1,333 +1,438 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
   Button,
   Paper,
-  Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  LinearProgress,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
 } from '@mui/material';
 import {
   ArrowBack as ArrowBackIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
+  CloudUpload as CloudUploadIcon,
   Download as DownloadIcon,
-  Person as PersonIcon,
-  DirectionsBike as BikeIcon,
-  CalendarToday as CalendarIcon,
-  LocationOn as LocationIcon,
-  Analytics as AnalyticsIcon,
-  CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
+  Schedule as ScheduleIcon,
+  Timeline as TimelineIcon,
+  AccessTime as AccessTimeIcon,
 } from '@mui/icons-material';
+import { LineChart } from '@mui/x-charts';
 import { useParams, useNavigate } from 'react-router-dom';
-
-// Sample data - in real app this would come from API
-const analysisData: Record<string, any> = {
-  'ORD-98745': {
-    id: 'ORD-98745',
-    client: 'Sophia Williams',
-    email: 'sophia.williams@email.com',
-    phone: '+48 123 456 789',
-    bike: 'Fitness Tracker S5 GPS 40mm White',
-    bikeType: 'Road Bike',
-    date: '2024-01-15',
-    status: 'Completed',
-    analysisType: 'Performance Analysis',
-    results: {
-      efficiency: 85,
-      comfort: 92,
-      power: 78,
-      aerodynamics: 88,
-      overall: 86,
-    },
-    recommendations: [
-      'Adjust saddle height by 2cm for optimal power transfer',
-      'Consider shorter stem for better aerodynamics',
-      'Lower handlebar position for improved performance',
-    ],
-    notes: 'Excellent overall fit. Minor adjustments recommended for competitive riding.',
-    location: 'Warsaw, Poland',
-  },
-  'ORD-98746': {
-    id: 'ORD-98746',
-    client: 'John Smith',
-    email: 'john.smith@email.com',
-    phone: '+48 987 654 321',
-    bike: 'Mountain Bike Pro 2024',
-    bikeType: 'Mountain Bike',
-    date: '2024-01-14',
-    status: 'In Progress',
-    analysisType: 'Comfort Analysis',
-    results: {
-      efficiency: 75,
-      comfort: 95,
-      power: 82,
-      aerodynamics: 70,
-      overall: 81,
-    },
-    recommendations: [
-      'Current setup is optimal for comfort',
-      'Consider wider handlebars for better control',
-      'Suspension settings are well-tuned',
-    ],
-    notes: 'Great comfort-focused setup. Ready for long-distance riding.',
-    location: 'Krakow, Poland',
-  },
-};
 
 const AnalysisDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
-  const analysis = analysisData[id || ''];
+  const [selectedBodyPart, setSelectedBodyPart] = useState('Prawy bark');
 
-  if (!analysis) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h4" sx={{ mb: 2 }}>
-          Analysis not found
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/analizy')}
-        >
-          Back to Analyses
-        </Button>
-      </Box>
-    );
-  }
+  console.log(id);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return '#4caf50';
-    if (score >= 80) return '#8bc34a';
-    if (score >= 70) return '#ff9800';
-    return '#f44336';
+  const bodyParts = [
+    'Prawy bark',
+    'Lewy bark',
+    'Prawy łokieć',
+    'Lewy łokieć',
+    'Prawy biodro',
+    'Lewe biodro',
+    'Prawe kolano',
+    'Lewe kolano',
+    'Prawa kostka',
+    'Lewa kostka',
+  ];
+
+  // Sample data for charts
+  const timelineData = {
+    xAxis: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    series: [
+      {
+        data: [0, 2, 1, 3, 2, 4, 3, 5, 4, 6, 5, 7, 6, 8, 7, 9, 8, 10, 9, 11, 10, 12, 11, 13, 12],
+        color: '#22D3BB',
+      },
+    ],
   };
 
-  const getScoreIcon = (score: number) => {
-    if (score >= 80) return <CheckCircleIcon sx={{ color: getScoreColor(score) }} />;
-    return <WarningIcon sx={{ color: getScoreColor(score) }} />;
+  // Deviation data for horizontal bar chart
+  const deviationData = [
+    { time: 't1', left: 15, right: 12 },
+    { time: 't2', left: 22, right: 18 },
+    { time: 't3', left: 18, right: 15 },
+    { time: 't4', left: 25, right: 20 },
+    { time: 't5', left: 20, right: 16 },
+    { time: 't6', left: 28, right: 22 },
+    { time: 't7', left: 16, right: 14 },
+    { time: 't8', left: 24, right: 19 },
+    { time: 't9', left: 19, right: 17 },
+    { time: 't10', left: 26, right: 21 },
+    { time: 't11', left: 17, right: 13 },
+    { time: 't12', left: 23, right: 18 },
+  ];
+
+  const leftAverage = Math.round(deviationData.reduce((sum, item) => sum + item.left, 0) / deviationData.length);
+  const rightAverage = Math.round(deviationData.reduce((sum, item) => sum + item.right, 0) / deviationData.length);
+
+  const handleBack = () => {
+    navigate('/analizy');
   };
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/analizy')}
-          sx={{ mr: 2 }}
+        <IconButton
+          onClick={handleBack}
+          sx={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            backgroundColor: '#f5f5f5',
+            border: '1px solid #e0e0e0',
+            mr: 2,
+            '&:hover': {
+              backgroundColor: '#e0e0e0',
+            },
+          }}
         >
-          Back
-        </Button>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#333' }}>
-          Analysis Details
-        </Typography>
+          <ArrowBackIcon sx={{ color: '#666', fontSize: 20 }} />
+        </IconButton>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#333', mb: 0.5 }}>
+            12/10.09.2025
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#333' }}>
+            Szczegóły pomiaru
+          </Typography>
+        </Box>
       </Box>
 
+      {/* Video Section */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#333' }}>
+          Wideo z pomiarem
+        </Typography>
+
+        {/* Video Player Area */}
+        <Box
+          sx={{
+            width: '100%',
+            height: 300,
+            backgroundColor: '#f8f9fa',
+            border: '2px dashed #e0e0e0',
+            borderRadius: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 2,
+            position: 'relative',
+            overflow: 'hidden',
+          }}
+        >
+          {/* Mock video content with biomechanical tracking points */}
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              background: `
+                linear-gradient(90deg, #e0e0e0 1px, transparent 1px),
+                linear-gradient(#e0e0e0 1px, transparent 1px)
+              `,
+              backgroundSize: '20px 20px',
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {/* Mock person silhouette */}
+          </Box>
+        </Box>
+      </Paper>
+
       {/* Action Buttons */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 4, alignItems: 'center', justifyContent: 'space-between' }}>
         <Button
           variant="contained"
-          startIcon={<EditIcon />}
+          startIcon={<CloudUploadIcon />}
           sx={{
             backgroundColor: '#22D3BB',
             '&:hover': { backgroundColor: '#1bb5a3' },
           }}
         >
-          Edit
+          Wgraj plik
         </Button>
         <Button
-          variant="outlined"
+          variant="contained"
           startIcon={<DownloadIcon />}
           sx={{
-            borderColor: '#22D3BB',
-            color: '#22D3BB',
-            '&:hover': { borderColor: '#1bb5a3' },
+            backgroundColor: '#22D3BB',
+            '&:hover': { backgroundColor: '#1bb5a3' },
           }}
         >
-          Export Report
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<DeleteIcon />}
-          sx={{
-            borderColor: '#f44336',
-            color: '#f44336',
-            '&:hover': { borderColor: '#d32f2f' },
-          }}
-        >
-          Delete
+          Pobierz wideo
         </Button>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Client Information */}
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ bgcolor: '#22D3BB', mr: 2 }}>
-                <PersonIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {analysis.client}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#666' }}>
-                  {analysis.email}
-                </Typography>
-              </Box>
-            </Box>
-            
-            <List dense>
-              <ListItem>
-                <ListItemIcon>
-                  <PersonIcon sx={{ color: '#666' }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="Phone" 
-                  secondary={analysis.phone}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <CalendarIcon sx={{ color: '#666' }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="Date" 
-                  secondary={analysis.date}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemIcon>
-                  <LocationIcon sx={{ color: '#666' }} />
-                </ListItemIcon>
-                <ListItemText 
-                  primary="Location" 
-                  secondary={analysis.location}
-                />
-              </ListItem>
-            </List>
-          </Paper>
+      {/* Timeline Section */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TimelineIcon sx={{ color: '#22D3BB' }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>
+              Linia czasowa
+            </Typography>
+          </Box>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <Select
+              value={selectedBodyPart}
+              onChange={(e) => setSelectedBodyPart(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#e0e0e0' },
+                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#22D3BB' },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#22D3BB' },
+              }}
+            >
+              {bodyParts.map((part) => (
+                <MenuItem key={part} value={part}>
+                  {part}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Box>
 
-        {/* Bike Information */}
-        <Box sx={{ flex: 1 }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ bgcolor: '#ff9800', mr: 2 }}>
-                <BikeIcon />
-              </Avatar>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                  {analysis.bike}
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#666' }}>
-                  {analysis.bikeType}
-                </Typography>
-              </Box>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="body2" sx={{ mr: 1 }}>Status:</Typography>
-              <Chip
-                label={analysis.status}
-                size="small"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <AccessTimeIcon sx={{ color: '#666', fontSize: 16 }} />
+          <Typography variant="body2" sx={{ color: '#666' }}>
+            CZAS POMIARU
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#333' }}>
+            4 min
+          </Typography>
+        </Box>
+
+        {/* Line Chart */}
+        <Box
+          sx={{
+            width: '100%',
+            height: 300,
+            backgroundColor: '#f8f9fa',
+            borderRadius: 1,
+            p: 2,
+          }}
+        >
+          <LineChart
+            xAxis={[{ data: timelineData.xAxis, scaleType: 'linear' }]}
+            series={timelineData.series}
+            height={250}
+            colors={['#22D3BB']}
+            grid={{ horizontal: true, vertical: true }}
+            margin={{ left: 40, right: 20, top: 20, bottom: 40 }}
+          />
+        </Box>
+      </Paper>
+
+      {/* Left/Right Deviations Section */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <ScheduleIcon sx={{ color: '#22D3BB' }} />
+          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#333' }}>
+            Odchylenia lewa/prawa
+          </Typography>
+        </Box>
+
+        {/* Custom Horizontal Bar Chart */}
+        <Box sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              width: '100%',
+              height: 350,
+              backgroundColor: '#f8f9fa',
+              borderRadius: 1,
+              p: 2,
+              position: 'relative',
+            }}
+          >
+            {/* Chart Title */}
+            <Typography variant="h6" sx={{ textAlign: 'center', mb: 2, fontWeight: 'bold', color: '#333' }}>
+              Odchylenia lewa/prawa
+            </Typography>
+
+            {/* Chart Container */}
+            <Box
+              sx={{
+                width: '100%',
+                height: 250,
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                maxWidth: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Center vertical axis */}
+              <Box
                 sx={{
-                  backgroundColor: analysis.status === 'Completed' ? '#e8f5e8' : '#fff3e0',
-                  color: analysis.status === 'Completed' ? '#2e7d32' : '#f57c00',
+                  position: 'absolute',
+                  left: '50%',
+                  top: 0,
+                  bottom: 0,
+                  width: 2,
+                  backgroundColor: '#333',
+                  transform: 'translateX(-50%)',
+                  zIndex: 1,
                 }}
               />
-            </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <AnalyticsIcon sx={{ color: '#666', mr: 1 }} />
-              <Typography variant="body2" sx={{ color: '#666' }}>
-                {analysis.analysisType}
-              </Typography>
-            </Box>
-          </Paper>
-        </Box>
+              {/* Time axis labels */}
+              <Box
+                sx={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: -20,
+                  transform: 'translateX(-50%)',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: '#333',
+                }}
+              >
+                t
+              </Box>
 
-        {/* Analysis Results */}
-        <Box>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 3 }}>
-              Analysis Results
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-              {Object.entries(analysis.results).map(([key, value]) => (
-                <Box key={key} sx={{ minWidth: '150px', flex: '1 1 150px' }}>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
-                      {getScoreIcon(value as number)}
-                    </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 'bold', color: getScoreColor(value as number), mb: 1 }}>
-                      {String(value)}%
+              {/* Horizontal bars */}
+              {deviationData.map((item, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: 15,
+                    position: 'relative',
+                    mb: 0.5,
+                    maxWidth: '100%',
+                  }}
+                >
+                  {/* Left bar (blue) */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      right: '50%',
+                      width: `${Math.min((item.left / 30) * 45, 45)}%`,
+                      height: 10,
+                      backgroundColor: '#2196f3',
+                      borderRadius: '5px 0 0 5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      pr: 0.5,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '8px', fontWeight: 'bold' }}>
+                      {item.left}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#666', textTransform: 'capitalize' }}>
-                      {key.replace(/([A-Z])/g, ' $1').trim()}
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={value as number}
-                      sx={{
-                        mt: 1,
-                        height: 6,
-                        borderRadius: 3,
-                        backgroundColor: '#e0e0e0',
-                        '& .MuiLinearProgress-bar': {
-                          backgroundColor: getScoreColor(value as number),
-                        },
-                      }}
-                    />
                   </Box>
+
+                  {/* Right bar (orange) */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: '50%',
+                      width: `${Math.min((item.right / 30) * 45, 45)}%`,
+                      height: 10,
+                      backgroundColor: '#ff9800',
+                      borderRadius: '0 5px 5px 0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                      pl: 0.5,
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: 'white', fontSize: '8px', fontWeight: 'bold' }}>
+                      {item.right}
+                    </Typography>
+                  </Box>
+
+                  {/* Time label */}
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: -15,
+                      transform: 'translateX(-50%)',
+                      fontSize: '9px',
+                      color: '#666',
+                    }}
+                  >
+                    {item.time}
+                  </Typography>
                 </Box>
               ))}
+
+              {/* Units label */}
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  bottom: -20,
+                  right: 0,
+                  color: '#666',
+                  fontSize: '12px',
+                }}
+              >
+                mm
+              </Typography>
             </Box>
-          </Paper>
+          </Box>
         </Box>
 
-        {/* Recommendations */}
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-              Recommendations
+        {/* Summary */}
+        <Box sx={{ display: 'flex', gap: 4, justifyContent: 'center', mt: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                backgroundColor: '#ff9800',
+                borderRadius: '50%',
+              }}
+            />
+            <Typography variant="body2" sx={{ color: '#ff9800', fontWeight: 'bold' }}>
+              Prawa średnie odhylenie = {rightAverage}mm
             </Typography>
-            <List>
-              {analysis.recommendations.map((recommendation: string, index: number) => (
-                <ListItem key={index} sx={{ py: 0.5 }}>
-                  <ListItemIcon>
-                    <CheckCircleIcon sx={{ color: '#22D3BB', fontSize: 20 }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={recommendation}
-                    primaryTypographyProps={{ variant: 'body2' }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                backgroundColor: '#2196f3',
+                borderRadius: '50%',
+              }}
+            />
+            <Typography variant="body2" sx={{ color: '#2196f3', fontWeight: 'bold' }}>
+              Lewa średnie odhylenie = {leftAverage}mm
+            </Typography>
+          </Box>
         </Box>
+      </Paper>
 
-        {/* Notes */}
-        <Box sx={{ flex: 1 }}>
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-              Analysis Notes
-            </Typography>
-            <Typography variant="body1" sx={{ color: '#666' }}>
-              {analysis.notes}
-            </Typography>
-          </Paper>
-        </Box>
+      {/* Download Report Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Button
+          variant="contained"
+          startIcon={<DownloadIcon />}
+          size="large"
+          sx={{
+            backgroundColor: '#22D3BB',
+            px: 4,
+            py: 1.5,
+            fontSize: '1.1rem',
+            '&:hover': { backgroundColor: '#1bb5a3' },
+          }}
+        >
+          Pobierz raport z pomiaru
+        </Button>
       </Box>
     </Box>
   );
