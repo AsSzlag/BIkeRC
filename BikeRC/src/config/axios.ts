@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Base configuration for axios
 const axiosConfig = axios.create({
-  baseURL: 'https://api-mo2s.netrix.com.pl/api/download/video/1',
+  baseURL: 'https://api-mo2s.netrix.com.pl',
   timeout: 10000, // 10 seconds timeout
   headers: {
     'Content-Type': 'application/json',

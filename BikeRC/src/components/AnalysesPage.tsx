@@ -24,9 +24,48 @@ import {
   History as HistoryIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import apiService from '../services/ApiService';
+import { useJobContext } from '../hooks/useJobContext';
 
 const AnalysesPage: React.FC = () => {
   const navigate = useNavigate();
+  const { latest_analysis_job_id, saveJobResponseData, getJobResponseData } = useJobContext();
+
+  const fetchDoneJob = async () => {
+    if (latest_analysis_job_id) {
+      try {
+        // Check if we already have response data saved
+        const savedData = getJobResponseData(latest_analysis_job_id);
+        if (savedData) {
+          console.log('Using saved job response data:', savedData);
+          return;
+        }
+
+        // Fetch fresh data from API
+        const response = await apiService.getJobDetails(latest_analysis_job_id);
+        console.log('Latest analysis job details:', response);
+        
+        // Save response data to localStorage
+        if (response) {
+          const jobResponseData = {
+            job_id: latest_analysis_job_id,
+            files: response.files || [],
+            links: response.links || [],
+            analysis_results: response.analysis_results || null,
+            download_urls: response.download_urls || [],
+            created_at: new Date().toISOString(),
+          };
+          
+          saveJobResponseData(jobResponseData);
+        }
+      } catch (error) {
+        console.error('Error fetching job details:', error);
+      }
+    } else {
+      console.log('No latest analysis job ID found in context');
+    }
+  }
+  fetchDoneJob();
   
   // Sample data for the analyses table - expanded to 25 records for pagination
   const initialAnalyses = [
