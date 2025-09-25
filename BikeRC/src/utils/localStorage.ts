@@ -4,6 +4,8 @@ export const STORAGE_KEYS = {
   JOBS: 'bikerc_jobs',
   LATEST_ANALYSIS_JOB_ID: 'bikerc_latest_analysis_job_id',
   JOB_RESPONSE_PREFIX: 'bikerc_job_response_',
+  JOB_METADATA: 'bikerc_job_metadata',
+  JOBS_WITH_METADATA: 'bikerc_jobs_with_metadata',
 } as const;
 
 export const saveToLocalStorage = (key: string, data: any): void => {

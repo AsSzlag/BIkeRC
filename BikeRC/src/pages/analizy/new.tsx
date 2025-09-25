@@ -16,25 +16,25 @@ import {
 import { useNavigate } from 'react-router-dom';
 import apiService from '../../services/ApiService';
 import { useJobContext } from '../../hooks/useJobContext';
+import jobMetadataService, { type JobMetadata } from '../../services/JobMetadataService';
 
 const NewAnalysisPage: React.FC = () => {
   const navigate = useNavigate();
   const { addJob } = useJobContext();
-  const [clientName, setClientName] = useState('');
-  const [bikeModel, setBikeModel] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [jobMetadata, setJobMetadata] = useState<Partial<JobMetadata>>({});
 
   const handleSave = async () => {
-    // Validate form data
-    if (!clientName.trim()) {
-      alert('Proszę podać nazwę klienta');
+    // Validate metadata
+    if (!jobMetadata.name?.trim()) {
+      alert('Proszę podać nazwę analizy');
       return;
     }
     
-    if (!bikeModel.trim()) {
-      alert('Proszę podać model roweru');
+    if (!jobMetadata.rower?.trim()) {
+      alert('Proszę podać nazwę roweru/klienta');
       return;
     }
 
@@ -74,6 +74,23 @@ const NewAnalysisPage: React.FC = () => {
       });
       console.log('Upload successful:', result);
       
+      // Save job metadata
+      const metadata: JobMetadata = {
+        job_id: result.job_id,
+        name: jobMetadata.name!.trim(),
+        rower: jobMetadata.rower!.trim(),
+        type: 'analysis',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        description: jobMetadata.description,
+        tags: jobMetadata.tags,
+        client_info: jobMetadata.client_info,
+        bike_info: jobMetadata.bike_info,
+        session_info: jobMetadata.session_info,
+      };
+      
+      jobMetadataService.saveJobMetadata(metadata);
+      
       // Store job data in context
       addJob({
         job_id: result.job_id,
@@ -83,13 +100,13 @@ const NewAnalysisPage: React.FC = () => {
         queue_position: result.queue_position,
         status: 'pending',
         created_at: new Date().toISOString(),
-        client_name: clientName.trim(),
-        bike_model: bikeModel.trim(),
+        client_name: jobMetadata.rower!.trim(), // Use metadata rower as client_name for compatibility
+        bike_model: jobMetadata.bike_info?.model || 'Nieznany model',
         type: 'analysis'
       });
       
       // Show success message with job details
-      alert(`Analiza uruchomiona!\n\nKlient: ${clientName}\nRower: ${bikeModel}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
+      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata.rower}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
       
       // Navigate back to analyses list
       navigate('/analizy');
@@ -180,42 +197,42 @@ const NewAnalysisPage: React.FC = () => {
 
       {/* Form Content */}
       <Box sx={{ maxWidth: 800, mx: 'auto' }}>
-        {/* Client Information */}
+        {/* Simple Metadata Form */}
         <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#333' }}>
-            Klient*
+            Informacje o analizie
           </Typography>
-          <TextField
-            fullWidth
-            placeholder="Imię i nazwisko"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-              },
-            }}
-          />
-        </Paper>
-
-        {/* Bike Information */}
-        <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#333' }}>
-            Rower*
-          </Typography>
-          <TextField
-            fullWidth
-            placeholder="Nazwa, model"
-            value={bikeModel}
-            onChange={(e) => setBikeModel(e.target.value)}
-            variant="outlined"
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-              },
-            }}
-          />
+          
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="Nazwa analizy"
+              placeholder="Wprowadź nazwę analizy"
+              value={jobMetadata.name || ''}
+              onChange={(e) => setJobMetadata(prev => ({ ...prev, name: e.target.value }))}
+              variant="outlined"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                },
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Rower"
+              placeholder="Wprowadź model roweru"
+              value={jobMetadata.rower || ''}
+              onChange={(e) => setJobMetadata(prev => ({ ...prev, rower: e.target.value }))}
+              variant="outlined"
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                },
+              }}
+            />
+          </Box>
         </Paper>
 
         {/* Video/File Upload Section */}

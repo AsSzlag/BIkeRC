@@ -321,6 +321,10 @@ class ApiService {
     return this.get<HealthCheckResponse>('/health');
   }
 
+  async getAllJobs(): Promise<VideoProcessingJob[]> {
+    return this.get<VideoProcessingJob[]>('/api/jobs');
+  }
+
   /**
    * Test method to get root endpoint data
    * This is a basic test to verify API connectivity

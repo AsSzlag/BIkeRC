@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -15,6 +15,8 @@ import {
   Select,
   MenuItem,
   FormControl,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -24,83 +26,87 @@ import {
   History as HistoryIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import apiService from '../services/ApiService';
-import { useJobContext } from '../hooks/useJobContext';
+import apiService, { type VideoProcessingJob } from '../services/ApiService';
+import jobMetadataService from '../services/JobMetadataService';
 
 const AnalysesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { latest_analysis_job_id, saveJobResponseData, getJobResponseData } = useJobContext();
 
-  const fetchDoneJob = async () => {
-    if (latest_analysis_job_id) {
-      try {
-        // Check if we already have response data saved
-        const savedData = getJobResponseData(latest_analysis_job_id);
-        if (savedData) {
-          console.log('Using saved job response data:', savedData);
-          return;
-        }
-
-        // Fetch fresh data from API
-        const response = await apiService.getJobDetails(latest_analysis_job_id);
-        console.log('Latest analysis job details:', response);
-        
-        // Save response data to localStorage
-        if (response) {
-          const jobResponseData = {
-            job_id: latest_analysis_job_id,
-            files: response.files || [],
-            links: response.links || [],
-            analysis_results: response.analysis_results || null,
-            download_urls: response.download_urls || [],
-            created_at: new Date().toISOString(),
-          };
-          
-          saveJobResponseData(jobResponseData);
-        }
-      } catch (error) {
-        console.error('Error fetching job details:', error);
-      }
-    } else {
-      console.log('No latest analysis job ID found in context');
-    }
+  // State for managing analyses data
+  interface AnalysisData {
+    id: string;
+    client: string;
+    bike: string;
+    name: string;
+    date: string;
   }
-  fetchDoneJob();
-  
-  // Sample data for the analyses table - expanded to 25 records for pagination
-  const initialAnalyses = [
-    { id: 'ORD-98745', client: 'Sophia Williams', bike: 'Fitness Tracker S5 GPS 40mm White' },
-    { id: 'ORD-98746', client: 'Laura Perez', bike: 'Rider Xtreme 2023 256GB Silver' },
-    { id: 'ORD-98747', client: 'Lena Müller', bike: 'Visionary Pro 24-inch Purple' },
-    { id: 'ORD-98748', client: 'Natalia Nowak', bike: 'SoundBlaster Max Green' },
-    { id: 'ORD-98749', client: 'Wei Chen', bike: 'SmartHome Mini Orange' },
-    { id: 'ORD-98750', client: 'Emma Wright', bike: 'DisplayMaster Studio Standard Glass' },
-    { id: 'ORD-98751', client: 'Ravi Patel', bike: 'AirBuds Pro 2nd Gen' },
-    { id: 'ORD-98752', client: 'Nuray Aksoy', bike: 'Tablet Pro 10th Gen 64GB Wi-Fi Space Gray' },
-    { id: 'ORD-98753', client: 'Anna Kowalski', bike: 'City Bike Urban Pro' },
-    { id: 'ORD-98754', client: 'Piotr Nowak', bike: 'Mountain Bike Trail Master' },
-    { id: 'ORD-98755', client: 'Maria Garcia', bike: 'Road Bike Speed Demon' },
-    { id: 'ORD-98756', client: 'James Wilson', bike: 'Electric Bike Eco Ride' },
-    { id: 'ORD-98757', client: 'Elena Petrov', bike: 'Touring Bike Adventure Plus' },
-    { id: 'ORD-98758', client: 'Carlos Rodriguez', bike: 'BMX Bike Street Pro' },
-    { id: 'ORD-98759', client: 'Jennifer Lee', bike: 'Hybrid Bike Comfort Plus' },
-    { id: 'ORD-98760', client: 'Thomas Mueller', bike: 'Road Bike Carbon Pro' },
-    { id: 'ORD-98761', client: 'Amanda White', bike: 'Mountain Bike All Terrain' },
-    { id: 'ORD-98762', client: 'Daniel Kim', bike: 'City Bike Commuter' },
-    { id: 'ORD-98763', client: 'Rachel Green', bike: 'Electric Bike City Cruiser' },
-    { id: 'ORD-98764', client: 'Mark Johnson', bike: 'Touring Bike Explorer' },
-    { id: 'ORD-98765', client: 'Laura Martinez', bike: 'Road Bike Racing Edition' },
-    { id: 'ORD-98766', client: 'Kevin Brown', bike: 'Mountain Bike Enduro' },
-    { id: 'ORD-98767', client: 'Natalie Chen', bike: 'Hybrid Bike Urban Explorer' },
-    { id: 'ORD-98768', client: 'Alex Thompson', bike: 'BMX Bike Freestyle' },
-    { id: 'ORD-98769', client: 'Samantha Davis', bike: 'Electric Bike Eco Pro' },
-  ];
 
-  const [analyses, setAnalyses] = useState(initialAnalyses);
+  // API response type for getAllJobs
+  interface JobsResponse {
+    data?: VideoProcessingJob[];
+    jobs?: VideoProcessingJob[];
+  }
+
+  const [analyses, setAnalyses] = useState<AnalysisData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
+
+  // Fetch jobs data from API
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch all jobs from the API
+        const response = await apiService.getAllJobs();
+        console.log('API response:', response); // Debug log
+        
+        // Handle different response formats
+        const jobs: VideoProcessingJob[] = Array.isArray(response) ? response : 
+                                          (response as JobsResponse)?.data ? (response as JobsResponse).data! : 
+                                          (response as JobsResponse)?.jobs ? (response as JobsResponse).jobs! : [];
+        
+        console.log('Jobs array:', jobs); // Debug log
+        
+        // Ensure jobs is an array before mapping
+        if (!Array.isArray(jobs)) {
+          console.error('Jobs is not an array:', jobs);
+          setError('Invalid data format received from server');
+          return;
+        }
+        
+        // Map VideoProcessingJob data to AnalysisData format, combining with metadata
+        const analysesData: AnalysisData[] = jobs.map(job => {
+          const metadata = jobMetadataService.getJobMetadata(job.job_id || job.id);
+          
+          return {
+            id: job.job_id || job.id,
+            client: metadata?.rower || job.filename || 'Nieznany klient',
+            bike: metadata?.rower || 'Nieznany rower', // Using rower field for bike info
+            name: metadata?.name || `Analiza - ${new Date(job.createdAt).toLocaleDateString('pl-PL')}`,
+            date: metadata?.updated_at 
+              ? new Date(metadata.updated_at).toLocaleDateString('pl-PL')
+              : new Date(job.createdAt).toLocaleDateString('pl-PL')
+          };
+        });
+        
+        setAnalyses(analysesData);
+        
+      } catch (err) {
+        console.error('Error fetching jobs:', err);
+        setError('Failed to load analyses data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobs();
+  }, []);
 
   const handleRowClick = (id: string) => {
     navigate(`/analizy/${id}`);
@@ -193,130 +199,219 @@ const AnalysesPage: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Data Table */}
-      <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-        <Table sx={{ tableLayout: 'fixed' }}>
-          <TableHead>
-            <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
-              <TableCell padding="checkbox" sx={{ width: '50px' }}>
-                <Checkbox />
-              </TableCell>
-              <TableCell sx={{ width: '150px' }}>
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1, 
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: '#f0f0f0' }
-                  }}
-                  onClick={() => handleSort('id')}
-                >
-                  ID
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <ArrowUpwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'id' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                    <ArrowDownwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'id' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                  </Box>
-                </Box>
-              </TableCell>
-              <TableCell sx={{ width: '200px' }}>
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1, 
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: '#f0f0f0' }
-                  }}
-                  onClick={() => handleSort('client')}
-                >
-                  Klient
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <ArrowUpwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'client' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                    <ArrowDownwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'client' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                  </Box>
-                </Box>
-              </TableCell>
-              <TableCell sx={{ width: '300px' }}>
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1, 
-                    cursor: 'pointer',
-                    '&:hover': { backgroundColor: '#f0f0f0' }
-                  }}
-                  onClick={() => handleSort('bike')}
-                >
-                  Rower
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <ArrowUpwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'bike' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                    <ArrowDownwardIcon 
-                      sx={{ 
-                        fontSize: 12, 
-                        color: sortField === 'bike' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                      }} 
-                    />
-                  </Box>
-                </Box>
-              </TableCell>
-              <TableCell align="right" sx={{ width: '50px' }}></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {currentAnalyses.map((analysis, index) => (
-              <TableRow 
-                key={index} 
-                hover 
-                sx={{ cursor: 'pointer' }}
-                onClick={() => handleRowClick(analysis.id)}
-              >
-                <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
-                  <Checkbox />
-                </TableCell>
-                <TableCell sx={{ fontWeight: 500 }}>
-                  #{analysis.id}
-                </TableCell>
-                <TableCell>{analysis.client}</TableCell>
-                <TableCell>{analysis.bike}</TableCell>
-                <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                  <IconButton>
-                    <MoreVertIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      {/* Error State */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Pagination */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+      {/* Loading State */}
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <CircularProgress sx={{ color: '#22D3BB' }} />
+        </Box>
+      ) : (
+        <>
+          {/* Data Table */}
+          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+            <Table sx={{ tableLayout: 'fixed' }}>
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
+                  <TableCell padding="checkbox" sx={{ width: '50px' }}>
+                    <Checkbox />
+                  </TableCell>
+                  <TableCell sx={{ width: '150px' }}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' }
+                      }}
+                      onClick={() => handleSort('id')}
+                    >
+                      ID
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <ArrowUpwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'id' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                        <ArrowDownwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'id' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ width: '250px' }}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' }
+                      }}
+                      onClick={() => handleSort('name')}
+                    >
+                      Nazwa
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <ArrowUpwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'name' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                        <ArrowDownwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'name' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ width: '180px' }}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' }
+                      }}
+                      onClick={() => handleSort('client')}
+                    >
+                      Klient
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <ArrowUpwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'client' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                        <ArrowDownwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'client' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ width: '180px' }}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' }
+                      }}
+                      onClick={() => handleSort('bike')}
+                    >
+                      Rower
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <ArrowUpwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'bike' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                        <ArrowDownwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'bike' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ width: '120px' }}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        cursor: 'pointer',
+                        '&:hover': { backgroundColor: '#f0f0f0' }
+                      }}
+                      onClick={() => handleSort('date')}
+                    >
+                      Data
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <ArrowUpwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'date' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                        <ArrowDownwardIcon 
+                          sx={{ 
+                            fontSize: 12, 
+                            color: sortField === 'date' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
+                          }} 
+                        />
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell align="right" sx={{ width: '50px' }}></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {currentAnalyses.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                      <Typography variant="body1" color="textSecondary">
+                        Brak analiz do wyświetlenia
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  currentAnalyses.map((analysis) => (
+                    <TableRow 
+                      key={analysis.id} 
+                      hover 
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => handleRowClick(analysis.id)}
+                    >
+                      <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox />
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        #{analysis.id}
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {analysis.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{analysis.client}</TableCell>
+                      <TableCell>{analysis.bike}</TableCell>
+                      <TableCell>{analysis.date}</TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        <IconButton>
+                          <MoreVertIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
+
+      {/* Pagination - Only show when not loading and have data */}
+      {!loading && analyses.length > 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
         <Typography variant="body2" sx={{ color: '#666' }}>
           Strona {currentPage}/{totalPages}
         </Typography>
@@ -435,7 +530,8 @@ const AnalysesPage: React.FC = () => {
             na stronę
           </Typography>
         </Box>
-      </Box>
+        </Box>
+      )}
     </Box>
   );
 };

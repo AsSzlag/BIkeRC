@@ -126,28 +126,6 @@ const MeasurementsPage: React.FC = () => {
     }
   };
 
-  const testApiConnection = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('Testing API root endpoint...');
-      const testResponse = await apiService.getTest();
-      console.log('Test API response:', testResponse);
-      
-      // Show success message
-      alert(`API Test Successful!\n\nResponse: ${JSON.stringify(testResponse, null, 2)}`);
-      
-    } catch (err: unknown) {
-      console.error('API Test Error:', err);
-      const errorMessage = (err as Error).message || 'Failed to connect to API';
-      setError(errorMessage);
-      alert(`API Test Failed!\n\nError: ${errorMessage}\n\nCheck console for details.`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleRowClick = (id: string) => {
     navigate(`/pomiary/${id}`);
   };
@@ -284,26 +262,6 @@ const MeasurementsPage: React.FC = () => {
           </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={testApiConnection}
-            disabled={loading}
-            sx={{
-              borderColor: '#22D3BB',
-              color: '#22D3BB',
-              borderRadius: '10px',
-              '&:hover': {
-                borderColor: '#1bb5a3',
-                color: '#1bb5a3',
-              },
-              '&:disabled': {
-                borderColor: '#ccc',
-                color: '#ccc',
-              },
-            }}
-          >
-            {loading ? 'Testing...' : 'Test API'}
-          </Button>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
