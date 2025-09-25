@@ -22,6 +22,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import apiService from '../../services/ApiService';
 import { useJobContext } from '../../hooks/useJobContext';
+import jobMetadataService from '../../services/JobMetadataService';
 
 
 const NewMeasurementPage: React.FC = () => {
@@ -115,9 +116,23 @@ const NewMeasurementPage: React.FC = () => {
         bike_model: bikeModel.trim(),
         type: 'measurement'
       });
-      
-      // Show success message with job details
-      alert(`Pomiar zapisany!\n\nKlient: ${clientName}\nRower: ${bikeModel}\nData: ${getCurrentDate()}\n\nNagranie: ${formatTime(recordingTime1)}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
+
+      // Save metadata to local storage
+      const metadata = {
+        job_id: result.job_id,
+        name: `Pomiar ${clientName.trim()}`,
+        rower: clientName.trim(),
+        type: 'measurement' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        bike_info: {
+          model: bikeModel.trim(),
+          brand: '',
+          size: '',
+          year: 0
+        }
+      };
+      jobMetadataService.saveJobMetadata(metadata);
       
       // Navigate back to measurements list
       navigate('/pomiary');

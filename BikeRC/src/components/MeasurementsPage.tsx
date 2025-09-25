@@ -82,10 +82,11 @@ const MeasurementsPage: React.FC = () => {
       // Map VideoProcessingJob data to MeasurementData format, combining with metadata
       const measurementsData: MeasurementData[] = jobs.map(job => {
         const metadata = jobMetadataService.getJobMetadata(job.job_id || job.id);
+        console.log('Metadata:', metadata);
         
         return {
           id: job.job_id || job.id,
-          client: metadata?.rower || job.filename || 'Nieznany klient',
+          client: metadata?.name || job.filename || 'Nieznany klient',
           bike: metadata?.bike_info?.model || metadata?.bike_info?.brand || 'Nieznany rower',
           name: metadata?.name || `Pomiar`,
           date: metadata?.updated_at 
@@ -109,7 +110,7 @@ const MeasurementsPage: React.FC = () => {
   }, []);
 
   const handleRowClick = (id: string) => {
-    navigate(`/pomiary/${id}`);
+    navigate(`/analizy/${id}`);
   };
 
   const handleSort = (field: string) => {
@@ -230,63 +231,7 @@ const MeasurementsPage: React.FC = () => {
                   <TableCell padding="checkbox" sx={{ width: '50px' }}>
                     <Checkbox />
                   </TableCell>
-                  <TableCell sx={{ width: '150px' }}>
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: '#f0f0f0' }
-                      }}
-                      onClick={() => handleSort('id')}
-                    >
-                      ID
-                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <ArrowUpwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'id' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                        <ArrowDownwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'id' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ width: '250px' }}>
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: '#f0f0f0' }
-                      }}
-                      onClick={() => handleSort('name')}
-                    >
-                      Nazwa
-                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <ArrowUpwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'name' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                        <ArrowDownwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'name' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ width: '180px' }}>
+                  <TableCell sx={{ width: '200px' }}>
                     <Box 
                       sx={{ 
                         display: 'flex', 
@@ -314,7 +259,7 @@ const MeasurementsPage: React.FC = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ width: '180px' }}>
+                  <TableCell sx={{ width: '200px' }}>
                     <Box 
                       sx={{ 
                         display: 'flex', 
@@ -342,7 +287,7 @@ const MeasurementsPage: React.FC = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ width: '120px' }}>
+                  <TableCell sx={{ width: '150px' }}>
                     <Box 
                       sx={{ 
                         display: 'flex', 
@@ -376,7 +321,7 @@ const MeasurementsPage: React.FC = () => {
               <TableBody>
                 {currentMeasurements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                       <Typography variant="body1" color="textSecondary">
                         Brak pomiarów do wyświetlenia
                       </Typography>
@@ -392,14 +337,6 @@ const MeasurementsPage: React.FC = () => {
                     >
                       <TableCell padding="checkbox" onClick={(e) => e.stopPropagation()}>
                         <Checkbox />
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 500 }}>
-                        #{measurement.id}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {measurement.name}
-                        </Typography>
                       </TableCell>
                       <TableCell>{measurement.client}</TableCell>
                       <TableCell>{measurement.bike}</TableCell>
