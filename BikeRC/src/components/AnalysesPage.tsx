@@ -87,7 +87,7 @@ const AnalysesPage: React.FC = () => {
           return {
             id: job.job_id || job.id,
             client: metadata?.rower || job.filename || 'Nieznany klient',
-            bike: metadata?.rower || 'Nieznany rower', // Using rower field for bike info
+            bike: metadata?.bike_info?.model || metadata?.bike_info?.brand || 'Nieznany rower',
             name: metadata?.name || `Analiza - ${new Date(job.createdAt).toLocaleDateString('pl-PL')}`,
             date: metadata?.updated_at 
               ? new Date(metadata.updated_at).toLocaleDateString('pl-PL')

@@ -33,8 +33,8 @@ const NewAnalysisPage: React.FC = () => {
       return;
     }
     
-    if (!jobMetadata.rower?.trim()) {
-      alert('Proszę podać nazwę roweru/klienta');
+    if (!jobMetadata.bike_info?.model?.trim()) {
+      alert('Proszę podać model roweru');
       return;
     }
 
@@ -56,8 +56,8 @@ const NewAnalysisPage: React.FC = () => {
       });
       
       console.log('Uploading analysis data:', {
-        clientName: clientName.trim(),
-        bikeModel: bikeModel.trim(),
+        name: jobMetadata.name,
+        bikeModel: jobMetadata.bike_info?.model,
         date: getCurrentDate(),
         filename: selectedFile.name,
         fileType: selectedFile.type,
@@ -78,14 +78,19 @@ const NewAnalysisPage: React.FC = () => {
       const metadata: JobMetadata = {
         job_id: result.job_id,
         name: jobMetadata.name!.trim(),
-        rower: jobMetadata.rower!.trim(),
+        rower: 'Nieznany klient', // Default client name since we don't have a client field
         type: 'analysis',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         description: jobMetadata.description,
         tags: jobMetadata.tags,
         client_info: jobMetadata.client_info,
-        bike_info: jobMetadata.bike_info,
+        bike_info: {
+          model: jobMetadata.bike_info!.model!.trim(),
+          brand: '',
+          size: '',
+          year: ''
+        },
         session_info: jobMetadata.session_info,
       };
       
@@ -100,13 +105,13 @@ const NewAnalysisPage: React.FC = () => {
         queue_position: result.queue_position,
         status: 'pending',
         created_at: new Date().toISOString(),
-        client_name: jobMetadata.rower!.trim(), // Use metadata rower as client_name for compatibility
-        bike_model: jobMetadata.bike_info?.model || 'Nieznany model',
+        client_name: 'Nieznany klient', // Default client name
+        bike_model: jobMetadata.bike_info!.model!.trim(),
         type: 'analysis'
       });
       
       // Show success message with job details
-      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata.rower}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
+      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata.bike_info.model}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
       
       // Navigate back to analyses list
       navigate('/analizy');
@@ -222,8 +227,14 @@ const NewAnalysisPage: React.FC = () => {
               fullWidth
               label="Rower"
               placeholder="Wprowadź model roweru"
-              value={jobMetadata.rower || ''}
-              onChange={(e) => setJobMetadata(prev => ({ ...prev, rower: e.target.value }))}
+              value={jobMetadata.bike_info?.model || ''}
+              onChange={(e) => setJobMetadata(prev => ({ 
+                ...prev, 
+                bike_info: { 
+                  ...prev.bike_info, 
+                  model: e.target.value 
+                } 
+              }))}
               variant="outlined"
               required
               sx={{
