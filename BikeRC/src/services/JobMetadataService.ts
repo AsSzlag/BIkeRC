@@ -1,5 +1,5 @@
 // Service for managing job metadata that combines backend job_id with local custom data
-import { saveToLocalStorage, loadFromLocalStorage, STORAGE_KEYS } from '../utils/localStorage';
+import { saveToLocalStorage, loadFromLocalStorage } from '../utils/localStorage';
 
 export interface JobMetadata {
   job_id: string;
@@ -42,7 +42,7 @@ export interface JobWithMetadata {
 
 class JobMetadataService {
   private readonly METADATA_KEY = 'bikerc_job_metadata';
-  private readonly JOBS_WITH_METADATA_KEY = 'bikerc_jobs_with_metadata';
+  // private readonly JOBS_WITH_METADATA_KEY = 'bikerc_jobs_with_metadata';
 
   // Save job metadata
   saveJobMetadata(metadata: JobMetadata): void {

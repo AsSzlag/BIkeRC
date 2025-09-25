@@ -710,10 +710,10 @@ const AnalysisDetail: React.FC = () => {
     }
 
     return {
-      categories: deviationData.map(item => item.bodyPart),
-      leftSeries: deviationData.map(item => item.leftAvg),
-      rightSeries: deviationData.map(item => item.rightAvg),
-      deviationSeries: deviationData.map(item => item.deviation)
+      categories: deviationData.map(item => item?.bodyPart),
+      leftSeries: deviationData.map(item => item?.leftAvg ?? 0),
+      rightSeries: deviationData.map(item => item?.rightAvg ?? 0),
+      deviationSeries: deviationData.map(item => item?.deviation ?? 0)
     };
   }, [getLeftRightDeviationData]);
 
@@ -844,24 +844,6 @@ const AnalysisDetail: React.FC = () => {
     };
   }, [selectedBodyPart, getAngleDataForBodyPart]); // Dependencies to recalculate when data changes
 
-  // Deviation data for horizontal bar chart
-  const deviationData = [
-    { time: 't1', left: 15, right: 12 },
-    { time: 't2', left: 22, right: 18 },
-    { time: 't3', left: 18, right: 15 },
-    { time: 't4', left: 25, right: 20 },
-    { time: 't5', left: 20, right: 16 },
-    { time: 't6', left: 28, right: 22 },
-    { time: 't7', left: 16, right: 14 },
-    { time: 't8', left: 24, right: 19 },
-    { time: 't9', left: 19, right: 17 },
-    { time: 't10', left: 26, right: 21 },
-    { time: 't11', left: 17, right: 13 },
-    { time: 't12', left: 23, right: 18 },
-  ];
-
-  const leftAverage = Math.round(deviationData.reduce((sum, item) => sum + item.left, 0) / deviationData.length);
-  const rightAverage = Math.round(deviationData.reduce((sum, item) => sum + item.right, 0) / deviationData.length);
 
   const handleBack = () => {
     navigate('/analizy');
@@ -1537,23 +1519,23 @@ const AnalysisDetail: React.FC = () => {
                     }}
                   >
                     <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
-                      {item.bodyPart}
+                      {item?.bodyPart}
                     </Typography>
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                      Lewa: {item.leftAvg.toFixed(1)}° (próbek: {item.leftDataCount})
+                      Lewa: {item?.leftAvg?.toFixed(1)}° (próbek: {item?.leftDataCount})
                     </Typography>
                     <Typography variant="caption" color="textSecondary" sx={{ display: 'block' }}>
-                      Prawa: {item.rightAvg.toFixed(1)}° (próbek: {item.rightDataCount})
+                      Prawa: {item?.rightAvg?.toFixed(1)}° (próbek: {item?.rightDataCount})
                     </Typography>
                     <Typography
                       variant="caption"
                     sx={{
                         display: 'block',
                         fontWeight: 'bold',
-                        color: item.deviation > 10 ? '#f44336' : item.deviation > 5 ? '#ff9800' : '#4caf50'
+                        color: (item?.deviation ?? 0) > 10 ? '#f44336' : (item?.deviation ?? 0) > 5 ? '#ff9800' : '#4caf50'
                       }}
                     >
-                      Odchylenie: {item.deviation.toFixed(1)}°
+                      Odchylenie: {item?.deviation?.toFixed(1)}°
                     </Typography>
 
                     {/* Visual deviation indicator */}
@@ -1563,9 +1545,9 @@ const AnalysisDetail: React.FC = () => {
                       position: 'absolute',
                           left: 0,
                           top: 0,
-                          width: `${Math.min((item.deviation / 20) * 100, 100)}%`,
+                          width: `${Math.min((item?.deviation ?? 0 / 20) * 100, 100)}%`,
                           height: '100%',
-                          backgroundColor: item.deviation > 10 ? '#f44336' : item.deviation > 5 ? '#ff9800' : '#4caf50',
+                          backgroundColor: item?.deviation ?? 0 > 10 ? '#f44336' : item?.deviation ?? 0 > 5 ? '#ff9800' : '#4caf50',
                           borderRadius: 1,
                           transition: 'width 0.3s ease',
                         }}
@@ -1582,7 +1564,7 @@ const AnalysisDetail: React.FC = () => {
                           fontSize: '10px'
                         }}
                       >
-                        {item.deviation.toFixed(1)}°
+                        {item?.deviation?.toFixed(1)}°
                   </Typography>
                     </Box>
                 </Box>
@@ -1632,7 +1614,7 @@ const AnalysisDetail: React.FC = () => {
             <Typography variant="body2" sx={{ color: '#22D3BB', fontWeight: 'bold' }}>
               Całkowite średnie odchylenie: {
                 getLeftRightDeviationData().length > 0
-                  ? (getLeftRightDeviationData().reduce((sum, item) => sum + item.deviation, 0) / getLeftRightDeviationData().length).toFixed(1)
+                  ? (getLeftRightDeviationData().reduce((sum, item) => sum + (item?.deviation || 0), 0) / getLeftRightDeviationData().length).toFixed(1)
                   : '0'
               }°
             </Typography>

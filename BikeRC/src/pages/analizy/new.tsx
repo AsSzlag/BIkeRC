@@ -89,7 +89,7 @@ const NewAnalysisPage: React.FC = () => {
           model: jobMetadata.bike_info!.model!.trim(),
           brand: '',
           size: '',
-          year: ''
+          year: 0
         },
         session_info: jobMetadata.session_info,
       };
@@ -111,7 +111,7 @@ const NewAnalysisPage: React.FC = () => {
       });
       
       // Show success message with job details
-      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata.bike_info.model}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
+      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata?.bike_info?.model}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
       
       // Navigate back to analyses list
       navigate('/analizy');

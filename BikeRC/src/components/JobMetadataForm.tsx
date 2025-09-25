@@ -10,7 +10,6 @@ import {
   Chip,
   Autocomplete,
   Paper,
-  Divider,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -84,8 +83,9 @@ const JobMetadataForm: React.FC<JobMetadataFormProps> = ({
     // Handle nested fields
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      updatedData[parent as keyof JobMetadata] = {
-        ...updatedData[parent as keyof JobMetadata],
+      const parentValue = updatedData[parent as keyof JobMetadata] as Record<string, any> || {};
+      (updatedData as any)[parent] = {
+        ...parentValue,
         [child]: value
       };
     } else {
