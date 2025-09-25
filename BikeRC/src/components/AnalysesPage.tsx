@@ -56,55 +56,55 @@ const AnalysesPage: React.FC = () => {
   const [recordsPerPage, setRecordsPerPage] = useState(10);
 
   // Fetch jobs data from API
-  useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Fetch all jobs from the API
-        const response = await apiService.getAllJobs();
-        console.log('API response:', response); // Debug log
-        
-        // Handle different response formats
-        const jobs: VideoProcessingJob[] = Array.isArray(response) ? response : 
-                                          (response as JobsResponse)?.data ? (response as JobsResponse).data! : 
-                                          (response as JobsResponse)?.jobs ? (response as JobsResponse).jobs! : [];
-        
-        console.log('Jobs array:', jobs); // Debug log
-        
-        // Ensure jobs is an array before mapping
-        if (!Array.isArray(jobs)) {
-          console.error('Jobs is not an array:', jobs);
-          setError('Invalid data format received from server');
-          return;
-        }
-        
-        // Map VideoProcessingJob data to AnalysisData format, combining with metadata
-        const analysesData: AnalysisData[] = jobs.map(job => {
-          const metadata = jobMetadataService.getJobMetadata(job.job_id || job.id);
-          
-          return {
-            id: job.job_id || job.id,
-            client: metadata?.rower || job.filename || 'Nieznany klient',
-            bike: metadata?.bike_info?.model || metadata?.bike_info?.brand || 'Nieznany rower',
-            name: metadata?.name || `Analiza - ${new Date(job.createdAt).toLocaleDateString('pl-PL')}`,
-            date: metadata?.updated_at 
-              ? new Date(metadata.updated_at).toLocaleDateString('pl-PL')
-              : new Date(job.createdAt).toLocaleDateString('pl-PL')
-          };
-        });
-        
-        setAnalyses(analysesData);
-        
-      } catch (err) {
-        console.error('Error fetching jobs:', err);
-        setError('Failed to load analyses data. Please try again.');
-      } finally {
-        setLoading(false);
+  const fetchJobs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch all jobs from the API
+      const response = await apiService.getAllJobs();
+      console.log('API response:', response); // Debug log
+      
+      // Handle different response formats
+      const jobs: VideoProcessingJob[] = Array.isArray(response) ? response : 
+                                        (response as JobsResponse)?.data ? (response as JobsResponse).data! : 
+                                        (response as JobsResponse)?.jobs ? (response as JobsResponse).jobs! : [];
+      
+      console.log('Jobs array:', jobs); // Debug log
+      
+      // Ensure jobs is an array before mapping
+      if (!Array.isArray(jobs)) {
+        console.error('Jobs is not an array:', jobs);
+        setError('Invalid data format received from server');
+        return;
       }
-    };
+      
+      // Map VideoProcessingJob data to AnalysisData format, combining with metadata
+      const analysesData: AnalysisData[] = jobs.map(job => {
+        const metadata = jobMetadataService.getJobMetadata(job.job_id || job.id);
+        
+        return {
+          id: job.job_id || job.id,
+          client: metadata?.rower || job.filename || 'Nieznany klient',
+          bike: metadata?.bike_info?.model || metadata?.bike_info?.brand || 'Nieznany rower',
+          name: metadata?.name || `Analiza`,
+          date: metadata?.updated_at 
+            ? new Date(metadata.updated_at).toLocaleDateString('pl-PL')
+            : new Date().toLocaleDateString('pl-PL')
+        };
+      });
+      
+      setAnalyses(analysesData);
+      
+    } catch (err) {
+      console.error('Error fetching jobs:', err);
+      setError('Failed to load analyses data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchJobs();
   }, []);
 
@@ -171,7 +171,16 @@ const AnalysesPage: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: '#f8f9fa',
+                borderColor: '#22D3BB',
+                transform: 'scale(1.05)',
+              },
             }}
+            onClick={fetchJobs}
+            title="Odśwież listę analiz"
           >
             <HistoryIcon sx={{ color: '#666', fontSize: 24 }} />
           </Box>
@@ -180,7 +189,7 @@ const AnalysesPage: React.FC = () => {
               Lista analiz
             </Typography>
             <Typography variant="body1" sx={{ color: '#666' }}>
-              Manage and track your orders
+              Sprawdź wyniki analiz i zarządzaj nimi
             </Typography>
           </Box>
         </Box>
@@ -260,7 +269,7 @@ const AnalysesPage: React.FC = () => {
                       }}
                       onClick={() => handleSort('name')}
                     >
-                      Nazwa
+                      Klient
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                         <ArrowUpwardIcon 
                           sx={{ 
@@ -272,34 +281,6 @@ const AnalysesPage: React.FC = () => {
                           sx={{ 
                             fontSize: 12, 
                             color: sortField === 'name' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ width: '180px' }}>
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1, 
-                        cursor: 'pointer',
-                        '&:hover': { backgroundColor: '#f0f0f0' }
-                      }}
-                      onClick={() => handleSort('client')}
-                    >
-                      Klient
-                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <ArrowUpwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'client' && sortDirection === 'asc' ? '#22D3BB' : '#666' 
-                          }} 
-                        />
-                        <ArrowDownwardIcon 
-                          sx={{ 
-                            fontSize: 12, 
-                            color: sortField === 'client' && sortDirection === 'desc' ? '#22D3BB' : '#666' 
                           }} 
                         />
                       </Box>
@@ -392,7 +373,7 @@ const AnalysesPage: React.FC = () => {
                           {analysis.name}
                         </Typography>
                       </TableCell>
-                      <TableCell>{analysis.client}</TableCell>
+                      {/* <TableCell>{analysis.client}</TableCell> */}
                       <TableCell>{analysis.bike}</TableCell>
                       <TableCell>{analysis.date}</TableCell>
                       <TableCell align="right" onClick={(e) => e.stopPropagation()}>

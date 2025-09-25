@@ -19,6 +19,7 @@ import {
 import { LineChart, BarChart } from '@mui/x-charts';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiService, { type VideoProcessingJob } from '../../services/ApiService';
+import jobMetadataService from '../../services/JobMetadataService';
 
 // Extended job details interface for video URLs
 interface ExtendedJobDetails extends VideoProcessingJob {
@@ -52,10 +53,6 @@ const AnalysisDetail: React.FC = () => {
   const [jobDetails, setJobDetails] = useState<VideoProcessingJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [videoError, setVideoError] = useState(false);
-  const [corsMode, setCorsMode] = useState<'use-credentials' | 'anonymous' | ''>('anonymous');
-  const [cachedVideoUrl, setCachedVideoUrl] = useState<string | null>(null);
-  const [downloadingVideo, setDownloadingVideo] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [loadingCsv, setLoadingCsv] = useState(false);
@@ -192,180 +189,6 @@ const AnalysisDetail: React.FC = () => {
     return csvUrl;
   };
 
-  // Test if video URL is accessible
-  const testVideoUrl = async (videoUrl: string) => {
-    try {
-      console.log('Testing video URL accessibility:', videoUrl);
-      console.log('Testing with CORS mode:', corsMode);
-
-      // Try without credentials first (since server uses wildcard CORS)
-      const response = await fetch(videoUrl, {
-        method: 'HEAD', // Just check headers, don't download content
-        mode: 'cors',
-        // Don't send Authorization header for anonymous requests
-        ...(corsMode === 'use-credentials' && {
-          credentials: 'include',
-          headers: {
-            'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : '',
-          },
-        })
-      });
-
-      console.log('Video URL test result:', {
-        status: response.status,
-        contentType: response.headers.get('content-type'),
-        contentLength: response.headers.get('content-length'),
-        corsMode: corsMode
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('video/')) {
-          console.log('Video URL is accessible and has video content type');
-          return true;
-        } else {
-          console.log('URL accessible but not video content:', contentType);
-          return false;
-        }
-      } else {
-        console.log('Video URL not accessible:', response.status);
-        return false;
-      }
-    } catch (error) {
-      console.error('Error testing video URL:', error);
-      return false;
-    }
-  };
-
-  // IndexedDB functions for video caching
-  const openVideoCache = () => {
-    return new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open('VideoCache', 1);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('videos')) {
-          db.createObjectStore('videos', { keyPath: 'id' });
-        }
-      };
-    });
-  };
-
-  const getCachedVideo = async (videoId: string): Promise<Blob | null> => {
-    try {
-      const db = await openVideoCache();
-      const transaction = db.transaction(['videos'], 'readonly');
-      const store = transaction.objectStore('videos');
-
-      return new Promise((resolve, reject) => {
-        const request = store.get(videoId);
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-          const result = request.result;
-          resolve(result ? result.blob : null);
-        };
-      });
-    } catch (error) {
-      console.error('Error getting cached video:', error);
-      return null;
-    }
-  };
-
-  const cacheVideo = async (videoId: string, blob: Blob): Promise<void> => {
-    try {
-      const db = await openVideoCache();
-      const transaction = db.transaction(['videos'], 'readwrite');
-      const store = transaction.objectStore('videos');
-
-      await new Promise<void>((resolve, reject) => {
-        const request = store.put({ id: videoId, blob, timestamp: Date.now() });
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve();
-      });
-
-      console.log('Video cached successfully');
-    } catch (error) {
-      console.error('Error caching video:', error);
-    }
-  };
-
-  // Download and cache video
-  const downloadAndCacheVideo = async (videoUrl: string, videoId: string) => {
-    try {
-      setDownloadingVideo(true);
-      setDownloadProgress(0);
-      console.log('Downloading video for caching:', videoUrl);
-
-      // Check if already cached
-      const cachedBlob = await getCachedVideo(videoId);
-      if (cachedBlob) {
-        console.log('Video already cached, using cached version');
-        const blobUrl = URL.createObjectURL(cachedBlob);
-        setCachedVideoUrl(blobUrl);
-        setDownloadingVideo(false);
-        return;
-      }
-
-      const response = await fetch(videoUrl, {
-        method: 'GET',
-        mode: 'cors',
-        ...(corsMode === 'use-credentials' && {
-          credentials: 'include',
-          headers: {
-            'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : '',
-          },
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const contentLength = response.headers.get('content-length');
-      const total = contentLength ? parseInt(contentLength, 10) : 0;
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body is not readable');
-      }
-
-      const chunks: Uint8Array[] = [];
-      let loaded = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        chunks.push(value);
-        loaded += value.length;
-
-        if (total > 0) {
-          const progress = Math.round((loaded / total) * 100);
-          setDownloadProgress(progress);
-        }
-      }
-
-      // Combine chunks into single blob
-      const blob = new Blob(chunks as BlobPart[], { type: 'video/mp4' });
-      console.log('Video downloaded, size:', blob.size, 'bytes');
-
-      // Cache the video
-      await cacheVideo(videoId, blob);
-
-      // Create blob URL for playback
-      const blobUrl = URL.createObjectURL(blob);
-      setCachedVideoUrl(blobUrl);
-
-    } catch (error) {
-      console.error('Error downloading video:', error);
-      setVideoError(true);
-    } finally {
-      setDownloadingVideo(false);
-    }
-  };
 
   // CSV parsing utility
   const parseCSV = (csvText: string) => {
@@ -397,12 +220,6 @@ const AnalysisDetail: React.FC = () => {
       const response = await fetch(csvUrl, {
         method: 'GET',
         mode: 'cors',
-        ...(corsMode === 'use-credentials' && {
-          credentials: 'include',
-          headers: {
-            'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : '',
-          },
-        })
       });
 
       if (!response.ok) {
@@ -717,100 +534,6 @@ const AnalysisDetail: React.FC = () => {
     };
   }, [getLeftRightDeviationData]);
 
-  // Check video file format and content
-  const checkVideoFileFormat = async (videoUrl: string) => {
-    try {
-      console.log('Checking video file format for:', videoUrl);
-
-      const response = await fetch(videoUrl, {
-        method: 'GET',
-        headers: {
-          'Range': 'bytes=0-1023', // Get first 1KB to check file signature
-        },
-        mode: 'cors',
-        ...(corsMode === 'use-credentials' && {
-          credentials: 'include',
-          headers: {
-            'Authorization': localStorage.getItem('authToken') ? `Bearer ${localStorage.getItem('authToken')}` : '',
-            'Range': 'bytes=0-1023',
-          },
-        })
-      });
-
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-
-        // Check file signature (magic bytes)
-        const signature = Array.from(uint8Array.slice(0, 12))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join(' ');
-
-        console.log('File signature (first 12 bytes):', signature);
-        console.log('Content-Type:', response.headers.get('content-type'));
-        console.log('Content-Length:', response.headers.get('content-length'));
-
-        // Check for common video file signatures
-        const signatureStr = signature.replace(/\s/g, '');
-        if (signatureStr.startsWith('000000')) {
-          if (signatureStr.includes('6674797069736f6d') || signatureStr.includes('66747970')) {
-            console.log('Detected: MP4/MOV container');
-          } else if (signatureStr.includes('6674797033677035')) {
-            console.log('Detected: 3GP container');
-          } else {
-            console.log('Detected: Unknown container with ftyp box');
-          }
-        } else if (signatureStr.startsWith('1a45dfa3')) {
-          console.log('Detected: WebM/MKV container');
-        } else if (signatureStr.startsWith('4f676753')) {
-          console.log('Detected: OGG container');
-        } else if (signatureStr.startsWith('52494646')) {
-          console.log('Detected: AVI container');
-        } else {
-          console.log('Unknown file format - might not be a video file');
-          console.log('First 32 bytes as text:', new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.slice(0, 32)));
-        }
-      }
-    } catch (error) {
-      console.error('Error checking video file format:', error);
-    }
-  };
-
-  // Auto-load cached video or start caching when job details are loaded
-  useEffect(() => {
-    const videoUrl = getVideoUrl();
-    if (videoUrl && id && !cachedVideoUrl && !downloadingVideo) {
-      // First check if video is already cached
-      getCachedVideo(id).then(cachedBlob => {
-        if (cachedBlob) {
-          console.log('Found cached video, using it');
-          const blobUrl = URL.createObjectURL(cachedBlob);
-          setCachedVideoUrl(blobUrl);
-        } else {
-          // If not cached, test URL accessibility
-          testVideoUrl(videoUrl).then(isAccessible => {
-            if (isAccessible) {
-              // If accessible, automatically start caching
-              console.log('Video accessible, starting automatic caching');
-              downloadAndCacheVideo(videoUrl, id);
-            } else {
-              console.log('Video URL is not accessible, showing error state');
-              setVideoError(true);
-            }
-          });
-        }
-      });
-    }
-  }, [jobDetails, id, cachedVideoUrl, downloadingVideo]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Cleanup blob URLs when component unmounts
-  useEffect(() => {
-    return () => {
-      if (cachedVideoUrl) {
-        URL.revokeObjectURL(cachedVideoUrl);
-      }
-    };
-  }, [cachedVideoUrl]);
 
 
 
@@ -870,13 +593,36 @@ const AnalysisDetail: React.FC = () => {
           <ArrowBackIcon sx={{ color: '#666', fontSize: 20 }} />
         </IconButton>
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#333', mb: 0.5 }}>
-            12/10.09.2025
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#333' }}>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#333', mb: 1 }}>
             Szczegóły pomiaru
           </Typography>
         </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', alignItems: 'baseline' }}>
+        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#333' }}>
+          {(() => {
+            if (!jobDetails) return 'Szczegóły pomiaru';
+            const metadata = jobMetadataService.getJobMetadata(jobDetails.job_id || jobDetails.id);
+            return metadata?.name || `Analiza`;
+          })()}
+        </Typography>
+        <Typography variant="body1" sx={{ color: '#666' }}>
+          <strong>Rower:</strong> {(() => {
+            if (!jobDetails) return 'Nieznany rower';
+            const metadata = jobMetadataService.getJobMetadata(jobDetails.job_id || jobDetails.id);
+            return metadata?.bike_info?.model || metadata?.bike_info?.brand || 'Nieznany rower';
+          })()}
+        </Typography>
+        <Typography variant="body1" sx={{ color: '#666' }}>
+          <strong>Data:</strong> {(() => {
+            if (!jobDetails) return new Date().toLocaleDateString('pl-PL');
+            const metadata = jobMetadataService.getJobMetadata(jobDetails.job_id || jobDetails.id);
+            return metadata?.updated_at 
+              ? new Date(metadata.updated_at).toLocaleDateString('pl-PL')
+              : new Date().toLocaleDateString('pl-PL');
+          })()}
+        </Typography>
       </Box>
 
       {/* Video Section */}
@@ -915,66 +661,9 @@ const AnalysisDetail: React.FC = () => {
                 Ładowanie danych...
               </Typography>
             </Box>
-          ) : downloadingVideo ? (
-            <Box
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 2,
-              }}
-            >
-              <Typography variant="body1" color="textSecondary">
-                Pobieranie wideo do pamięci lokalnej...
-              </Typography>
-              <Box sx={{ width: '80%', display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: 8,
-                    backgroundColor: '#e0e0e0',
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: `${downloadProgress}%`,
-                      height: '100%',
-                      backgroundColor: '#22D3BB',
-                      transition: 'width 0.3s ease',
-                    }}
-                  />
-                </Box>
-                <Typography variant="caption" sx={{ minWidth: 40 }}>
-                  {downloadProgress}%
-                </Typography>
-              </Box>
-            </Box>
-          ) : cachedVideoUrl ? (
-            <video
-              controls
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'contain',
-              }}
-              onError={(e) => {
-                console.error('Cached video error:', e);
-                setVideoError(true);
-              }}
-              onLoadedMetadata={() => {
-                console.log('Cached video loaded successfully');
-              }}
-              src={cachedVideoUrl}
-            >
-              Twoja przeglądarka nie obsługuje odtwarzania wideo.
-            </video>
           ) : getVideoUrl() ? (
             <video
               controls
-              crossOrigin={corsMode || undefined}
               preload="metadata"
               style={{
                 width: '100%',
@@ -992,25 +681,7 @@ const AnalysisDetail: React.FC = () => {
                   readyState: video.readyState,
                   currentSrc: video.currentSrc
                 });
-
-                // MediaError codes:
-                // 1 = MEDIA_ERR_ABORTED - playback aborted
-                // 2 = MEDIA_ERR_NETWORK - network error
-                // 3 = MEDIA_ERR_DECODE - decode error (like DEMUXER_ERROR_NO_SUPPORTED_STREAMS)
-                // 4 = MEDIA_ERR_SRC_NOT_SUPPORTED - format not supported
-
-                if (video.error?.code === 3) {
-                  console.log('Video decode error - possibly unsupported codec or corrupted file');
-                  // Try to fetch file info to debug
-                  checkVideoFileFormat(video.currentSrc);
-                } else if (video.error?.code === 4) {
-                  console.log('Video format not supported or authentication required');
-                }
-
                 setVideoError(true);
-              }}
-              onLoadStart={() => {
-                console.log('Video loading started for:', 'https://api-mo2s.netrix.com.pl/api/download/video/44f87db2-175e-4043-a635-a3d72babde44');
               }}
               onLoadedMetadata={(e) => {
                 const video = e.target as HTMLVideoElement;
@@ -1023,12 +694,7 @@ const AnalysisDetail: React.FC = () => {
               }}
               onCanPlay={() => {
                 console.log('Video can play successfully!');
-              }}
-              onCanPlayThrough={() => {
-                console.log('Video can play through without buffering');
-              }}
-              onPlay={() => {
-                console.log('Video started playing');
+                setVideoError(false);
               }}
               src={getVideoUrl()!}
             >
@@ -1048,91 +714,12 @@ const AnalysisDetail: React.FC = () => {
               }}
             >
               <Typography variant="h6" color="textSecondary">
-                Problem z formatem wideo
+                Problem z odtwarzaniem wideo
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ textAlign: 'center', mb: 2 }}>
-                Wideo nie może być odtworzone - możliwe problemy: nieobsługiwany kodek, uszkodzony plik,
-                lub problem z CORS. Sprawdź konsolę dla szczegółów lub pobierz wideo lokalnie.
+                Wideo nie może być odtworzone. Sprawdź konsolę dla szczegółów lub pobierz wideo.
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    setCorsMode('use-credentials');
-                    setVideoError(false);
-                  }}
-                  sx={{
-                    borderColor: corsMode === 'use-credentials' ? '#22D3BB' : '#ccc',
-                    color: corsMode === 'use-credentials' ? '#22D3BB' : '#666',
-                    backgroundColor: corsMode === 'use-credentials' ? '#f0fffe' : 'transparent',
-                  }}
-                >
-                  CORS: Credentials
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    setCorsMode('anonymous');
-                    setVideoError(false);
-                  }}
-                  sx={{
-                    borderColor: corsMode === 'anonymous' ? '#22D3BB' : '#ccc',
-                    color: corsMode === 'anonymous' ? '#22D3BB' : '#666',
-                    backgroundColor: corsMode === 'anonymous' ? '#f0fffe' : 'transparent',
-                  }}
-                >
-                  CORS: Anonymous
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={() => {
-                    setCorsMode('');
-                    setVideoError(false);
-                  }}
-                  sx={{
-                    borderColor: corsMode === '' ? '#22D3BB' : '#ccc',
-                    color: corsMode === '' ? '#22D3BB' : '#666',
-                    backgroundColor: corsMode === '' ? '#f0fffe' : 'transparent',
-                  }}
-                >
-                  No CORS
-                </Button>
-              </Box>
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    const videoUrl = getVideoUrl();
-                    if (videoUrl && id) {
-                      downloadAndCacheVideo(videoUrl, id);
-                    }
-                  }}
-                  sx={{
-                    backgroundColor: '#22D3BB',
-                    '&:hover': { backgroundColor: '#1bb5a3' },
-                  }}
-                >
-                  Pobierz do pamięci lokalnej
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    const videoUrl = getVideoUrl();
-                    if (videoUrl) {
-                      checkVideoFileFormat(videoUrl);
-                    }
-                  }}
-                  sx={{
-                    borderColor: '#ff9800',
-                    color: '#ff9800',
-                    '&:hover': { borderColor: '#f57c00', backgroundColor: '#fff8e1' },
-                  }}
-                >
-                  Sprawdź format pliku
-                </Button>
                 <Button
                   variant="outlined"
                   onClick={() => {

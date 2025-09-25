@@ -110,9 +110,6 @@ const NewAnalysisPage: React.FC = () => {
         type: 'analysis'
       });
       
-      // Show success message with job details
-      alert(`Analiza uruchomiona!\n\nNazwa: ${metadata.name}\nRower: ${metadata?.bike_info?.model}\nData: ${getCurrentDate()}\n\nPlik: ${selectedFile.name}\n\nJob ID: ${result.job_id}\nSzacowany czas: ${result.estimated_wait_time}\nPozycja w kolejce: ${result.queue_position}`);
-      
       // Navigate back to analyses list
       navigate('/analizy');
     } catch (error) {
@@ -317,6 +314,7 @@ const NewAnalysisPage: React.FC = () => {
           )}
         </Paper>
       </Box>
+
     </Box>
   );
 };
